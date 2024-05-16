@@ -25,8 +25,9 @@ while running:
         input["y"] -= 1
     if keys[pygame.K_UP]:
         input["y"] += 1
-        
-    handler.send(json.dumps(input))
+    
+    if input != {"x" : 0, "y" : 0}:
+        handler.send("i" + json.dumps(input)) # i for input, this will tell the server that input data is being sent
 
     clock.tick(60)
     for event in pygame.event.get():
