@@ -13,7 +13,7 @@ handler = networkHandler.NetworkHandler
 handler.initialize()
 
 clock = pygame.time.Clock()
-
+lastInput = {"x" : 0, "y" : 0}
 while running:
     input = {"x" : 0, "y" : 0}
     keys = pygame.key.get_pressed()
@@ -26,8 +26,9 @@ while running:
     if keys[pygame.K_UP]:
         input["y"] += 1
     
-    if input != {"x" : 0, "y" : 0}:
+    if input != lastInput:
         handler.send("i" + json.dumps(input)) # i for input, this will tell the server that input data is being sent
+    lastInput = input
 
     clock.tick(60)
     for event in pygame.event.get():

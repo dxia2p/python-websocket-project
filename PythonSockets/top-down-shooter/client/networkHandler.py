@@ -25,3 +25,6 @@ class NetworkHandler:
         send_length += b" " * (HEADER - len(send_length))
         NetworkHandler.client.send(send_length)
         NetworkHandler.client.send(message)
+
+    def recv(outputFunc):
+        pass
