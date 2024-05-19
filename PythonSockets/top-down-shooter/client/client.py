@@ -1,5 +1,5 @@
 import pygame
-import networkHandler
+import clientnetworkhandler
 import json
 
 pygame.init()
@@ -9,7 +9,7 @@ screen = pygame.display.set_mode((700, 700))
 pygame.display.set_caption("My Game")
 running = True
 
-handler = networkHandler.NetworkHandler
+handler = clientnetworkhandler.ClientNetworkHandler
 handler.initialize()
 
 clock = pygame.time.Clock()
@@ -27,11 +27,12 @@ while running:
         input["y"] += 1
     
     if input != lastInput:
-        handler.send("i" + json.dumps(input)) # i for input, this will tell the server that input data is being sent
+        handler.send("i|" + json.dumps(input)) # i for input, this will tell the server that input data is being sent
     lastInput = input
 
     clock.tick(60)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+handler.send("!DISCONNECT")
 pygame.quit()
