@@ -1,5 +1,6 @@
 import pygame
 import clientnetworkhandler
+import clientplayer
 import json
 
 pygame.init()
@@ -12,8 +13,23 @@ running = True
 handler = clientnetworkhandler.ClientNetworkHandler
 handler.initialize()
 
+player = clientplayer.ClientPlayer()
+
+def move_player(msg):
+    print(msg)
+    pass
+
+handler.add_function("p", move_player)
+
+def recieve_all_players(msg):
+    
+    pass
+
+handler.add_function("receieve_all", recieve_all_players)
+
 clock = pygame.time.Clock()
 lastInput = {"x" : 0, "y" : 0}
+# ------------------------------- MAIN LOOP --------------------------------------
 while running:
     input = {"x" : 0, "y" : 0}
     keys = pygame.key.get_pressed()

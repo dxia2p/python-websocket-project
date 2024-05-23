@@ -1,7 +1,9 @@
 import pygame
 import time
 
-class Player:
-    def __init__(self, id, pos=pygame.Vector2(0,0)) -> None:
+class ServerPlayer:
+    next_id = 0
+    def __init__(self, pos=pygame.Vector2(0,0)) -> None:
         self.pos = pygame.Vector2(0, 0)
-        self.id = id
+        self.id = ServerPlayer.next_id
+        ServerPlayer.next_id += 1

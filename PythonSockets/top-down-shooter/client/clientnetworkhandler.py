@@ -5,67 +5,49 @@ from typing import Callable
 BUFFER_SIZE = 1024
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
+MSG_SPLIT_IDENTIFIER = '|'
 
 class ClientNetworkHandler:
     port = -1
     ip = ""
     client = None
 
-    recvFunctions = {}
-    onJoinCallback = None
+    recv_functions = {}
+    on_join_callback = None
 
     @staticmethod
-    def initialize(ip = socket.gethostbyname(socket.gethostname()), port = 6969, onJoinCallback = lambda : None):
+    def initialize(ip = socket.gethostbyname(socket.gethostname()), port = 6969, on_join_callback = lambda : None):
         ClientNetworkHandler.ip = ip
         ClientNetworkHandler.port = port
         ClientNetworkHandler.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         ClientNetworkHandler.client.connect((ip, port))
-        ClientNetworkHandler.onJoinCallback = onJoinCallback
+        ClientNetworkHandler.on_join_callback = on_join_callback
         #ClientNetworkHandler.server.settimeout(2.0)
 
+        ClientNetworkHandler.on_join_callback()
         print(f"[CONNECTED TO SERVER ON {ip}:{port}]")
         handle_recv_thread = threading.Thread(target=ClientNetworkHandler.handle_recv, daemon=True)
+        handle_recv_thread.start()
 
     @staticmethod
     def handle_recv():
-        while True:
-            msg = ClientNetworkHandler.client.recv(BUFFER_SIZE)
-            print(msg)
+        connected = True
+        while connected:
+            msg = ClientNetworkHandler.client.recv(BUFFER_SIZE).decode(FORMAT)
+            if msg == DISCONNECT_MESSAGE:
+                connected = False
+
+            split_msg = msg.split(MSG_SPLIT_IDENTIFIER, 1)
+            if split_msg[0] in ClientNetworkHandler.recv_functions:
+                ClientNetworkHandler.recv_functions[split_msg[0]](split_msg[1])
+            
+
 
     @staticmethod
     def send(msg):
         message = msg.encode(FORMAT)
         ClientNetworkHandler.client.send(message)
 
-
-    """
-    @staticmethod
-    def AcceptClients():
-        while True:
-            conn, addr = ClientNetworkHandler.server.accept()
-            thread = threading.Thread(target=ClientNetworkHandler.HandleClient, args=(conn, addr), daemon=True)
-            thread.start()
-            ClientNetworkHandler.onJoinCallback()
-            print(f"[ACTIVE CONNECTIONS] {threading.active_count() - 2}")
-
-    @staticmethod
-    def HandleClient(conn, addr):
-        print(f"[NEW CONNECTION] {addr} connected.")
-
-        connected = True
-        while connected: # LOGIC FOR RECIEVING DATA GOES HERE
-
-            msg = conn.recv(BUFFER_SIZE).decode(FORMAT)
-            if msg == DISCONNECT_MESSAGE:
-                connected = False
-
-            splitMsg = msg.split('|') # All messages should have this character after the identifier for the data in the message
-
-            if splitMsg[0] in ClientNetworkHandler.recvFunctions:
-                ClientNetworkHandler.recvFunctions[splitMsg[0]](splitMsg[1])
-
-        conn.close()
-    """
-    
-    def AddFunction(messageIdentifier : str, function : Callable[[str], None]):
-        ClientNetworkHandler.recvFunctions[messageIdentifier] = function
+    @classmethod
+    def add_function(cls, messageIdentifier : str, function : Callable[[str], None]):
+        cls.recv_functions[messageIdentifier] = function

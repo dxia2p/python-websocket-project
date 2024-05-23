@@ -5,6 +5,7 @@ from typing import Callable
 BUFFER_SIZE = 1024
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
+MSG_SPLIT_IDENTIFIER = '|'
 
 class ServerNetworkHandler:
     port = -1
@@ -12,15 +13,18 @@ class ServerNetworkHandler:
     server = None
 
     recv_functions = {}
-    clientAddedCallback = None
+    client_added_callback = None
+
+    clients = []
 
     @classmethod
-    def Initialize(cls, ip = socket.gethostbyname(socket.gethostname()), port = 6969, clientAddedCallback = lambda : None):
+    def initialize(cls, client_added_callback : Callable[[socket.socket], None], client_removed_callback : Callable[[socket.socket], None], ip = socket.gethostbyname(socket.gethostname()), port = 6969):
         cls.ip = ip
         cls.port = port
         cls.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         cls.server.bind((ip, port))
-        cls.clientAddedCallback = clientAddedCallback
+        cls.client_added_callback = client_added_callback
+        cls.client_removed_callback = client_removed_callback
         #cls.server.settimeout(2.0)
 
         cls.server.listen()
@@ -34,7 +38,8 @@ class ServerNetworkHandler:
             conn, addr = cls.server.accept()
             thread = threading.Thread(target=cls.handle_client, args=(conn, addr), daemon=True)
             thread.start()
-            cls.clientAddedCallback()
+            cls.client_added_callback(conn)
+            cls.clients.append(conn)
             print(f"[ACTIVE CONNECTIONS] {threading.active_count() - 2}")
 
     @classmethod
@@ -48,13 +53,39 @@ class ServerNetworkHandler:
             if msg == DISCONNECT_MESSAGE:
                 connected = False
 
-            splitMsg = msg.split('|') # All messages should have this character after the identifier for the data in the message
+            split_msg = msg.split(MSG_SPLIT_IDENTIFIER, 1) # All messages should have this character after the identifier for the data in the message
 
-            if splitMsg[0] in cls.recv_functions:
-                cls.recv_functions[splitMsg[0]](splitMsg[1])
+            if split_msg[0] in cls.recv_functions:
+                cls.recv_functions[split_msg[0]](conn, split_msg[1])
 
+        cls.client_removed_callback(conn)
         conn.close()
-    
+
     @classmethod
-    def AddFunction(cls, messageIdentifier : str, function : Callable[[str], None]):
+    def send_to_all(cls, msg):
+        """Starts a thread and sens the provided message to all sockets connected to this server"""
+        thread = threading.Thread(target=cls.send_to_all_thread, args=(msg,))
+        thread.start()
+
+    @classmethod
+    def send_to_all_thread(cls, msg):
+        """Do not call this directly"""
+        for client in cls.clients:
+            message = msg.encode(FORMAT)
+            client.send(message)
+            print(client)
+
+    @classmethod
+    def send_to_conn(cls, conn, msg):
+        """Starts a thread and sends the provided message to the socket provided"""
+        thread = threading.Thread(target=cls.send_to_conn_thread, args=(conn, msg))
+
+    @classmethod
+    def send_to_conn_thread(cls, conn, msg):
+        """Do not call this directly"""
+        conn.send(msg.encode(FORMAT))
+
+    @classmethod
+    def add_recv_function(cls, messageIdentifier : str, function : Callable[[socket.Socket, str], None]):
+        """Adds a function that will be called when a message with the provided prefix is recieved"""
         cls.recv_functions[messageIdentifier] = function
