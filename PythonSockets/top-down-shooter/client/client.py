@@ -2,6 +2,7 @@ import pygame
 import clientnetworkhandler
 import clientplayer
 import json
+import clientcamera
 
 pygame.init()
 
@@ -13,19 +14,30 @@ running = True
 handler = clientnetworkhandler.ClientNetworkHandler
 handler.initialize()
 
-player = clientplayer.ClientPlayer()
+clientcamera.Camera.initialize(screen, pygame.Vector2(700, 700))
+
+players = {}
 
 def move_player(msg):
-    print(msg)
-    pass
+    player_move_data = json.loads(msg) # [id, {"x" : x, "y" : y}]
+    print(player_move_data[0])
+    players[player_move_data[0]].pos = pygame.Vector2(player_move_data[1]["x"], player_move_data[1]["y"])
 
-handler.add_function("p", move_player)
+handler.add_function("move_player", move_player)
 
 def recieve_all_players(msg):
-    
-    pass
+    players_list = json.loads(msg)
+    for player in players_list:
+        players[player[0]] = clientplayer.ClientPlayer(pygame.Vector2(player[1]["x"], player[1]["y"]))
 
 handler.add_function("receieve_all", recieve_all_players)
+
+def player_added(msg):
+    new_player_data = json.loads(msg)
+    players[new_player_data[0]] = clientplayer.ClientPlayer(pygame.Vector2(new_player_data[1]["x"], new_player_data[1]["y"]))
+    pass
+
+handler.add_function("player_added", player_added)
 
 clock = pygame.time.Clock()
 lastInput = {"x" : 0, "y" : 0}
@@ -46,6 +58,11 @@ while running:
         handler.send("i|" + json.dumps(input)) # i for input, this will tell the server that input data is being sent
     lastInput = input
 
+    # Draw the player
+    for player_id in players:
+        clientcamera.Camera.draw_circle(players[player_id].pox, 10, "white")
+
+    pygame.display.flip()
     clock.tick(60)
     for event in pygame.event.get():
         if event.type == pygame.QUIT:

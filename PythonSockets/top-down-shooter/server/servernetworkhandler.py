@@ -54,7 +54,7 @@ class ServerNetworkHandler:
                 connected = False
 
             split_msg = msg.split(MSG_SPLIT_IDENTIFIER, 1) # All messages should have this character after the identifier for the data in the message
-
+            print(msg)
             if split_msg[0] in cls.recv_functions:
                 cls.recv_functions[split_msg[0]](conn, split_msg[1])
 
@@ -73,7 +73,6 @@ class ServerNetworkHandler:
         for client in cls.clients:
             message = msg.encode(FORMAT)
             client.send(message)
-            print(client)
 
     @classmethod
     def send_to_conn(cls, conn, msg):
@@ -86,6 +85,6 @@ class ServerNetworkHandler:
         conn.send(msg.encode(FORMAT))
 
     @classmethod
-    def add_recv_function(cls, messageIdentifier : str, function : Callable[[socket.Socket, str], None]):
+    def add_recv_function(cls, messageIdentifier : str, function : Callable[[socket.socket, str], None]):
         """Adds a function that will be called when a message with the provided prefix is recieved"""
         cls.recv_functions[messageIdentifier] = function
