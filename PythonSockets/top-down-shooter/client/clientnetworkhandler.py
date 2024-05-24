@@ -40,7 +40,9 @@ class ClientNetworkHandler:
             split_msg = msg.split(MSG_SPLIT_IDENTIFIER, 1)
             if split_msg[0] in ClientNetworkHandler.recv_functions:
                 ClientNetworkHandler.recv_functions[split_msg[0]](split_msg[1])
-            
+            else:
+                print(ClientNetworkHandler.recv_functions)
+                print(f"Unknown message identifier [{split_msg[0]}]!")
 
 
     @staticmethod

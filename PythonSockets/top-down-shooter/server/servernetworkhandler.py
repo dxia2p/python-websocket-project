@@ -14,6 +14,7 @@ class ServerNetworkHandler:
 
     recv_functions = {}
     client_added_callback = None
+    client_removed_callback = None
 
     clients = []
 
@@ -38,8 +39,8 @@ class ServerNetworkHandler:
             conn, addr = cls.server.accept()
             thread = threading.Thread(target=cls.handle_client, args=(conn, addr), daemon=True)
             thread.start()
-            cls.client_added_callback(conn)
             cls.clients.append(conn)
+            cls.client_added_callback(conn)
             print(f"[ACTIVE CONNECTIONS] {threading.active_count() - 2}")
 
     @classmethod
@@ -54,9 +55,11 @@ class ServerNetworkHandler:
                 connected = False
 
             split_msg = msg.split(MSG_SPLIT_IDENTIFIER, 1) # All messages should have this character after the identifier for the data in the message
-            print(msg)
+
             if split_msg[0] in cls.recv_functions:
                 cls.recv_functions[split_msg[0]](conn, split_msg[1])
+            else:
+                print(f"Unknown message identifier [{split_msg[0]}]!")
 
         cls.client_removed_callback(conn)
         conn.close()
@@ -78,6 +81,7 @@ class ServerNetworkHandler:
     def send_to_conn(cls, conn, msg):
         """Starts a thread and sends the provided message to the socket provided"""
         thread = threading.Thread(target=cls.send_to_conn_thread, args=(conn, msg))
+        thread.start()
 
     @classmethod
     def send_to_conn_thread(cls, conn, msg):

@@ -5,50 +5,57 @@ import time
 
 networkHandler = servernetworkhandler.ServerNetworkHandler
 
-PLAYER_MOVE_SPEED = 10
+PLAYER_MOVE_SPEED = 100
 MSI = servernetworkhandler.MSG_SPLIT_IDENTIFIER
 players = {}
-playerInputs = {}
+player_inputs = {}
 
 def client_added_callback(conn):
 
     # Give the new player all the existing players BEFORE the new player is created on the server to avoid duplicates
     all_players_json = []
-    for player_id in players:
-        all_players_json.append([player_id, {"x" : players[player_id].pos.x, "y" : players[player_id].pos.y}])
-    networkHandler.send_to_conn(conn, "recieve_all" + MSI + json.dumps(all_players_json))
+    for player_conn in players:
+        player = players[player_conn]
+        all_players_json.append([player.id, {"x" : player.pos.x, "y" : player.pos.y}])
+    print(json.dumps(all_players_json))
+    networkHandler.send_to_conn(conn, "receive_all" + MSI + json.dumps(all_players_json))
 
     players[conn] = serverPlayer.ServerPlayer()
 
     # Now send to all players that a new player has been added
     new_player_msg = json.dumps([players[conn].id, {"x" : players[conn].pos.x, "y" : players[conn].pos.y}])
-    networkHandler.send_to_all(new_player_msg)
+    networkHandler.send_to_all("player_added" + MSI + new_player_msg)
     
 
 def client_removed_callback(conn):
     players.pop(conn)
-    playerInputs.pop(conn)
+    player_inputs.pop(conn)
 
 networkHandler.initialize(client_added_callback=client_added_callback, client_removed_callback=client_removed_callback)
 
 
 def onInput(conn, msg):
     input = json.loads(msg)
-    playerInputs[conn] = input
+    player_inputs[conn] = input
     
 networkHandler.add_recv_function("i", onInput)
 
 # ------------------------- MAIN LOOP ----------------------
-
+last_time = time.perf_counter()
+delta_time = 0
 while True:
-    for conn in playerInputs:
-        players[conn].pos.x += playerInputs[conn]["x"]
-        players[conn].pos.y += playerInputs[conn]["y"]
+    for conn in player_inputs:
+        players[conn].pos.x += player_inputs[conn]["x"] * PLAYER_MOVE_SPEED * delta_time
+        players[conn].pos.y -= player_inputs[conn]["y"] * PLAYER_MOVE_SPEED * delta_time
 
     for conn in players:
         msg = json.dumps([players[conn].id, {"x" : players[conn].pos.x, "y" : players[conn].pos.y}])
         networkHandler.send_to_all("move_player" + MSI + msg)
 
+
     clock = time.perf_counter() * 60 # CODE TO MAKE THIS LOOP RUN 60 TIMES A SECOND
     sleep = int(clock) + 1 - clock
-    time.sleep(sleep)
+    time.sleep(sleep / 60)
+
+    delta_time = time.perf_counter() - last_time
+    last_time = time.perf_counter()
