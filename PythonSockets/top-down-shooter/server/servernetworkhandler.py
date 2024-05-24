@@ -5,7 +5,8 @@ from typing import Callable
 BUFFER_SIZE = 1024
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
-MSG_SPLIT_IDENTIFIER = '|'
+MSG_TYPE_SPLITTER = '|'
+MSG_END_IDENTIFIER = '&'
 
 class ServerNetworkHandler:
     port = -1
@@ -50,43 +51,41 @@ class ServerNetworkHandler:
         connected = True
         while connected: # LOGIC FOR RECIEVING DATA GOES HERE
 
-            msg = conn.recv(BUFFER_SIZE).decode(FORMAT)
-            if msg == DISCONNECT_MESSAGE:
+            raw_msg = conn.recv(BUFFER_SIZE).decode(FORMAT)
+            if raw_msg == DISCONNECT_MESSAGE:
                 connected = False
 
-            split_msg = msg.split(MSG_SPLIT_IDENTIFIER, 1) # All messages should have this character after the identifier for the data in the message
+            messages = raw_msg.split(MSG_END_IDENTIFIER) # In case tcp combines multiple messages into one
+            for msg in messages:
+                if msg == "":
+                    continue
 
-            if split_msg[0] in cls.recv_functions:
-                cls.recv_functions[split_msg[0]](conn, split_msg[1])
-            else:
-                print(f"Unknown message identifier [{split_msg[0]}]!")
+                split_identifier_msg = msg.split(MSG_TYPE_SPLITTER, 1) # All messages should have this character after the identifier for the data in the message
+                if split_identifier_msg[0] in cls.recv_functions:
+                    cls.recv_functions[split_identifier_msg[0]](conn, split_identifier_msg[1])
+                else:
+                    print(f"Unknown message identifier [{split_identifier_msg[0]}]!")
 
         cls.client_removed_callback(conn)
         conn.close()
 
     @classmethod
-    def send_to_all(cls, msg):
-        """Starts a thread and sens the provided message to all sockets connected to this server"""
-        thread = threading.Thread(target=cls.send_to_all_thread, args=(msg,))
-        thread.start()
+    def send_to_all(cls, identifier, msg):
+        """Starts a thread for each client and sends the provided message to all sockets connected to this server"""
+        for conn in cls.clients:
+            thread = threading.Thread(target=cls.send_to_conn_thread, args=(conn, identifier, msg))
+            thread.start()
 
     @classmethod
-    def send_to_all_thread(cls, msg):
-        """Do not call this directly"""
-        for client in cls.clients:
-            message = msg.encode(FORMAT)
-            client.send(message)
-
-    @classmethod
-    def send_to_conn(cls, conn, msg):
+    def send_to_conn(cls, conn, identifier, msg):
         """Starts a thread and sends the provided message to the socket provided"""
-        thread = threading.Thread(target=cls.send_to_conn_thread, args=(conn, msg))
+        thread = threading.Thread(target=cls.send_to_conn_thread, args=(conn, identifier, msg))
         thread.start()
 
     @classmethod
-    def send_to_conn_thread(cls, conn, msg):
+    def send_to_conn_thread(cls, conn, identifier, msg):
         """Do not call this directly"""
-        conn.send(msg.encode(FORMAT))
+        conn.send((identifier + MSG_TYPE_SPLITTER + msg + MSG_END_IDENTIFIER).encode(FORMAT))
 
     @classmethod
     def add_recv_function(cls, messageIdentifier : str, function : Callable[[socket.socket, str], None]):

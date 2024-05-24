@@ -5,7 +5,8 @@ from typing import Callable
 BUFFER_SIZE = 1024
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
-MSG_SPLIT_IDENTIFIER = '|'
+MSG_TYPE_SPLITTER = '|'
+MSG_END_IDENTIFIER = '&'
 
 class ClientNetworkHandler:
     port = -1
@@ -29,26 +30,29 @@ class ClientNetworkHandler:
         handle_recv_thread = threading.Thread(target=ClientNetworkHandler.handle_recv, daemon=True)
         handle_recv_thread.start()
 
-    @staticmethod
-    def handle_recv():
+    @classmethod
+    def handle_recv(cls):
         connected = True
         while connected:
-            msg = ClientNetworkHandler.client.recv(BUFFER_SIZE).decode(FORMAT)
-            if msg == DISCONNECT_MESSAGE:
+            raw_msg = cls.client.recv(BUFFER_SIZE).decode(FORMAT)
+            if raw_msg == DISCONNECT_MESSAGE:
                 connected = False
 
-            split_msg = msg.split(MSG_SPLIT_IDENTIFIER, 1)
-            if split_msg[0] in ClientNetworkHandler.recv_functions:
-                ClientNetworkHandler.recv_functions[split_msg[0]](split_msg[1])
-            else:
-                print(ClientNetworkHandler.recv_functions)
-                print(f"Unknown message identifier [{split_msg[0]}]!")
+            messages = raw_msg.split(MSG_END_IDENTIFIER) # This is in case multiple messages are combined into one by tcp
+            for msg in messages:
+                if msg == "": # There will always be a blank message at the end because of how split works, so it can be skipped
+                    continue
+
+                split_identifier_msg = msg.split(MSG_TYPE_SPLITTER, 1)
+                if split_identifier_msg[0] in cls.recv_functions:
+                    cls.recv_functions[split_identifier_msg[0]](split_identifier_msg[1])
+                else:
+                    print(f"Unknown message identifier [{split_identifier_msg[0]}]!")
 
 
     @staticmethod
-    def send(msg):
-        message = msg.encode(FORMAT)
-        ClientNetworkHandler.client.send(message)
+    def send(identifier, msg):
+        ClientNetworkHandler.client.send((identifier + MSG_TYPE_SPLITTER + msg + MSG_END_IDENTIFIER).encode(FORMAT))
 
     @classmethod
     def add_function(cls, messageIdentifier : str, function : Callable[[str], None]):

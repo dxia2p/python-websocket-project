@@ -59,7 +59,7 @@ while running:
         input["y"] += 1
     
     if input != lastInput:
-        handler.send("i|" + json.dumps(input)) # i for input, this will tell the server that input data is being sent
+        handler.send("i", json.dumps(input)) # i for input, this will tell the server that input data is being sent
     lastInput = input
 
     # Draw all the players
@@ -71,5 +71,5 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-handler.send("!DISCONNECT")
+handler.send("", "!DISCONNECT")
 pygame.quit()
