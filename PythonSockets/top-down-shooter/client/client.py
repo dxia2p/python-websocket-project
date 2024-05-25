@@ -25,7 +25,6 @@ def move_player(msg):
 handler.add_function("move_player", move_player)
 
 def receive_all_players(msg): # This is only called at the start on a newly joined player
-    print("Recieve: " + msg)
     players_list = json.loads(msg)
 
     for player in players_list:

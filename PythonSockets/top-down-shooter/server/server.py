@@ -20,6 +20,7 @@ def client_added_callback(conn):
     networkHandler.send_to_conn(conn, "receive_all", json.dumps(all_players_json))
 
     players[conn] = serverPlayer.ServerPlayer()
+    player_inputs[conn] = {"x" : 0, "y" : 0}
 
     # Now send to all players that a new player has been added
     new_player_msg = json.dumps([players[conn].id, {"x" : players[conn].pos.x, "y" : players[conn].pos.y}])
@@ -50,6 +51,8 @@ while True:
     for conn in players:
         msg = json.dumps([players[conn].id, {"x" : players[conn].pos.x, "y" : players[conn].pos.y}])
         networkHandler.send_to_all("move_player", msg)
+
+    # Put all logic above here -------------------------------------------
 
     clock = time.perf_counter() * 60 # CODE TO MAKE THIS LOOP RUN 60 TIMES A SECOND
     sleep = int(clock) + 1 - clock

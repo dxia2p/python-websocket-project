@@ -2,11 +2,11 @@ import socket
 import threading
 from typing import Callable
 
-BUFFER_SIZE = 1024
+HEADER = 32
+BUFFER_SIZE = 64
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
 MSG_TYPE_SPLITTER = '|'
-MSG_END_IDENTIFIER = '&'
 
 class ClientNetworkHandler:
     port = -1
@@ -16,43 +16,55 @@ class ClientNetworkHandler:
     recv_functions = {}
     on_join_callback = None
 
-    @staticmethod
-    def initialize(ip = socket.gethostbyname(socket.gethostname()), port = 6969, on_join_callback = lambda : None):
-        ClientNetworkHandler.ip = ip
-        ClientNetworkHandler.port = port
-        ClientNetworkHandler.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        ClientNetworkHandler.client.connect((ip, port))
-        ClientNetworkHandler.on_join_callback = on_join_callback
+    @classmethod
+    def initialize(cls, ip = socket.gethostbyname(socket.gethostname()), port = 6969, on_join_callback = lambda : None):
+        cls.ip = ip
+        cls.port = port
+        cls.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        cls.client.connect((ip, port))
+        cls.on_join_callback = on_join_callback
         #ClientNetworkHandler.server.settimeout(2.0)
 
-        ClientNetworkHandler.on_join_callback()
+        cls.on_join_callback()
         print(f"[CONNECTED TO SERVER ON {ip}:{port}]")
-        handle_recv_thread = threading.Thread(target=ClientNetworkHandler.handle_recv, daemon=True)
+        handle_recv_thread = threading.Thread(target=cls.handle_recv, daemon=True)
         handle_recv_thread.start()
 
     @classmethod
     def handle_recv(cls):
         connected = True
         while connected:
-            raw_msg = cls.client.recv(BUFFER_SIZE).decode(FORMAT)
-            if raw_msg == DISCONNECT_MESSAGE:
-                connected = False
 
-            messages = raw_msg.split(MSG_END_IDENTIFIER) # This is in case multiple messages are combined into one by tcp
-            for msg in messages:
-                if msg == "": # There will always be a blank message at the end because of how split works, so it can be skipped
+            msg_length = cls.client.recv(HEADER, socket.MSG_WAITALL).decode(FORMAT)
+            if msg_length: # Check if the message is none
+                msg_length = int(msg_length)
+                msg = cls.client.recv(msg_length, socket.MSG_WAITALL).decode(FORMAT)
+
+                split_msg = msg.split(MSG_TYPE_SPLITTER, 1) # All messages should have this character after the identifier for the data in the message
+                if split_msg[1] == DISCONNECT_MESSAGE:
+                    connected = False
                     continue
 
-                split_identifier_msg = msg.split(MSG_TYPE_SPLITTER, 1)
-                if split_identifier_msg[0] in cls.recv_functions:
-                    cls.recv_functions[split_identifier_msg[0]](split_identifier_msg[1])
+                if split_msg[0] in cls.recv_functions:
+                    cls.recv_functions[split_msg[0]](split_msg[1])
                 else:
-                    print(f"Unknown message identifier [{split_identifier_msg[0]}]!")
+                    print(f"Unknown message identifier [{split_msg[0]}]!")
 
+    @classmethod
+    def send(cls, identifier, msg):
+        """Starts a new thread and sends the message specified after sending the length of the message"""
+        thread = threading.Thread(target=cls.send_thread, args=(identifier, msg))
+        thread.start()
 
-    @staticmethod
-    def send(identifier, msg):
-        ClientNetworkHandler.client.send((identifier + MSG_TYPE_SPLITTER + msg + MSG_END_IDENTIFIER).encode(FORMAT))
+    @classmethod
+    def send_thread(cls, identifier, msg):
+        """Do not call this directly"""
+        message = (identifier + MSG_TYPE_SPLITTER + msg).encode(FORMAT)
+        msg_length = len(message)
+        send_length = str(msg_length).encode(FORMAT)
+        send_length += b" " * (HEADER - len(send_length))
+        cls.client.sendall(send_length)
+        cls.client.sendall(message)
 
     @classmethod
     def add_function(cls, messageIdentifier : str, function : Callable[[str], None]):

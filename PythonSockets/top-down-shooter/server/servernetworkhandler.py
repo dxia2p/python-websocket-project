@@ -2,11 +2,11 @@ import socket
 import threading
 from typing import Callable
 
+HEADER = 32
 BUFFER_SIZE = 1024
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
 MSG_TYPE_SPLITTER = '|'
-MSG_END_IDENTIFIER = '&'
 
 class ServerNetworkHandler:
     port = -1
@@ -51,22 +51,23 @@ class ServerNetworkHandler:
         connected = True
         while connected: # LOGIC FOR RECIEVING DATA GOES HERE
 
-            raw_msg = conn.recv(BUFFER_SIZE).decode(FORMAT)
-            if raw_msg == DISCONNECT_MESSAGE:
-                connected = False
+            msg_length = conn.recv(HEADER, socket.MSG_WAITALL).decode(FORMAT)
+            if msg_length: # check if the message is none
+                msg_length = int(msg_length)
+                msg = conn.recv(msg_length, socket.MSG_WAITALL).decode(FORMAT)
 
-            messages = raw_msg.split(MSG_END_IDENTIFIER) # In case tcp combines multiple messages into one
-            for msg in messages:
-                if msg == "":
+                split_msg = msg.split(MSG_TYPE_SPLITTER, 1) # All messages should have this character after the identifier for the data in the message
+                if(split_msg[1] == DISCONNECT_MESSAGE):
+                    connected = False
                     continue
 
-                split_identifier_msg = msg.split(MSG_TYPE_SPLITTER, 1) # All messages should have this character after the identifier for the data in the message
-                if split_identifier_msg[0] in cls.recv_functions:
-                    cls.recv_functions[split_identifier_msg[0]](conn, split_identifier_msg[1])
+                if split_msg[0] in cls.recv_functions:
+                    cls.recv_functions[split_msg[0]](conn, split_msg[1])
                 else:
-                    print(f"Unknown message identifier [{split_identifier_msg[0]}]!")
+                    print(f"Unknown message identifier [{split_msg[0]}]!")
 
         cls.client_removed_callback(conn)
+        cls.clients.remove(conn)
         conn.close()
 
     @classmethod
@@ -85,7 +86,12 @@ class ServerNetworkHandler:
     @classmethod
     def send_to_conn_thread(cls, conn, identifier, msg):
         """Do not call this directly"""
-        conn.send((identifier + MSG_TYPE_SPLITTER + msg + MSG_END_IDENTIFIER).encode(FORMAT))
+        message = (identifier + MSG_TYPE_SPLITTER + msg).encode(FORMAT)
+        msg_length = len(message)
+        send_length = str(msg_length).encode(FORMAT)
+        send_length += b" " * (HEADER - len(send_length))
+        conn.sendall(send_length)
+        conn.sendall(message)
 
     @classmethod
     def add_recv_function(cls, messageIdentifier : str, function : Callable[[socket.socket, str], None]):
