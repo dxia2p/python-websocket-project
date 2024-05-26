@@ -3,7 +3,7 @@ import serverPlayer
 import json
 import time
 
-networkHandler = servernetworkhandler.ServerNetworkHandler
+handler = servernetworkhandler.ServerNetworkHandler
 
 PLAYER_MOVE_SPEED = 100
 players = {}
@@ -17,28 +17,29 @@ def client_added_callback(conn):
         player = players[player_conn]
         all_players_json.append([player.id, {"x" : player.pos.x, "y" : player.pos.y}])
     print(json.dumps(all_players_json))
-    networkHandler.send_to_conn(conn, "receive_all", json.dumps(all_players_json))
+    handler.send_to_conn(conn, "receive_all", json.dumps(all_players_json))
 
     players[conn] = serverPlayer.ServerPlayer()
     player_inputs[conn] = {"x" : 0, "y" : 0}
 
     # Now send to all players that a new player has been added
     new_player_msg = json.dumps([players[conn].id, {"x" : players[conn].pos.x, "y" : players[conn].pos.y}])
-    networkHandler.send_to_all("player_added", new_player_msg)
+    handler.send_to_all("player_added", new_player_msg)
     
 
 def client_removed_callback(conn):
+    handler.send_to_all("player_left", json.dumps([players[conn].id]))
     players.pop(conn)
     player_inputs.pop(conn)
 
-networkHandler.initialize(client_added_callback=client_added_callback, client_removed_callback=client_removed_callback)
+handler.initialize(client_added_callback=client_added_callback, client_removed_callback=client_removed_callback)
 
 
 def onInput(conn, msg):
     input = json.loads(msg)
     player_inputs[conn] = input
     
-networkHandler.add_recv_function("i", onInput)
+handler.add_recv_function("i", onInput)
 
 # ------------------------- MAIN LOOP ----------------------
 last_time = time.perf_counter()
@@ -50,7 +51,7 @@ while True:
 
     for conn in players:
         msg = json.dumps([players[conn].id, {"x" : players[conn].pos.x, "y" : players[conn].pos.y}])
-        networkHandler.send_to_all("move_player", msg)
+        handler.send_to_all("move_player", msg)
 
     # Put all logic above here -------------------------------------------
 

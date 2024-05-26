@@ -35,9 +35,14 @@ handler.add_function("receive_all", receive_all_players)
 def player_added(msg):
     new_player_data = json.loads(msg)
     players[new_player_data[0]] = clientplayer.ClientPlayer(pygame.Vector2(new_player_data[1]["x"], new_player_data[1]["y"]))
-    pass
 
 handler.add_function("player_added", player_added)
+
+def player_left(msg):
+    id = json.loads(msg)[0]
+    players.pop(id)
+
+handler.add_function("player_left", player_left)
 
 clock = pygame.time.Clock()
 lastInput = {"x" : 0, "y" : 0}
