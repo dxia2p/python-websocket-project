@@ -28,7 +28,7 @@ def client_added_callback(conn):
     
 
 def client_removed_callback(conn):
-    handler.send_to_all("player_left", json.dumps([players[conn].id]))
+    handler.send_to_all_except_conn(conn, "player_left", json.dumps([players[conn].id]))
     players.pop(conn)
     player_inputs.pop(conn)
 
@@ -49,7 +49,7 @@ while True:
         players[conn].pos.x += player_inputs[conn]["x"] * PLAYER_MOVE_SPEED * delta_time
         players[conn].pos.y -= player_inputs[conn]["y"] * PLAYER_MOVE_SPEED * delta_time
 
-    for conn in players:
+    for conn in players.copy(): # need to make a copy of the dictionary so that there is no error if a player joins while we are looping through the players dictionary
         msg = json.dumps([players[conn].id, {"x" : players[conn].pos.x, "y" : players[conn].pos.y}])
         handler.send_to_all("move_player", msg)
 

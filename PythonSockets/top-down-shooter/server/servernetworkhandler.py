@@ -50,21 +50,23 @@ class ServerNetworkHandler:
 
         connected = True
         while connected: # LOGIC FOR RECIEVING DATA GOES HERE
+            try:
+                msg_length = conn.recv(HEADER, socket.MSG_WAITALL).decode(FORMAT)
+                if msg_length: # check if the message is none
+                    msg_length = int(msg_length)
+                    msg = conn.recv(msg_length, socket.MSG_WAITALL).decode(FORMAT)
 
-            msg_length = conn.recv(HEADER, socket.MSG_WAITALL).decode(FORMAT)
-            if msg_length: # check if the message is none
-                msg_length = int(msg_length)
-                msg = conn.recv(msg_length, socket.MSG_WAITALL).decode(FORMAT)
+                    split_msg = msg.split(MSG_TYPE_SPLITTER, 1) # All messages should have this character after the identifier for the data in the message
+                    if(split_msg[1] == DISCONNECT_MESSAGE):
+                        connected = False
+                        continue
 
-                split_msg = msg.split(MSG_TYPE_SPLITTER, 1) # All messages should have this character after the identifier for the data in the message
-                if(split_msg[1] == DISCONNECT_MESSAGE):
-                    connected = False
-                    continue
-
-                if split_msg[0] in cls.recv_functions:
-                    cls.recv_functions[split_msg[0]](conn, split_msg[1])
-                else:
-                    print(f"Unknown message identifier [{split_msg[0]}]!")
+                    if split_msg[0] in cls.recv_functions:
+                        cls.recv_functions[split_msg[0]](conn, split_msg[1])
+                    else:
+                        print(f"Unknown message identifier [{split_msg[0]}]!")
+            except Exception as ex:
+                print(ex)
 
         cls.client_removed_callback(conn)
         cls.clients.remove(conn)
@@ -73,7 +75,7 @@ class ServerNetworkHandler:
     @classmethod
     def send_to_all(cls, identifier, msg):
         """Starts a thread for each client and sends the provided message to all sockets connected to this server"""
-        for conn in cls.clients:
+        for conn in cls.clients.copy():
             thread = threading.Thread(target=cls.send_to_conn_thread, args=(conn, identifier, msg))
             thread.start()
 
@@ -83,6 +85,14 @@ class ServerNetworkHandler:
         thread = threading.Thread(target=cls.send_to_conn_thread, args=(conn, identifier, msg))
         thread.start()
 
+    @classmethod
+    def send_to_all_except_conn(cls, except_conn, identifier, msg):
+        """Starts a thread for each client except the one provided and sends the provided message"""
+        for conn in cls.clients.copy():
+            if conn != except_conn:
+                thread = threading.Thread(target=cls.send_to_conn_thread, args=(conn, identifier, msg))
+                thread.start()
+    
     @classmethod
     def send_to_conn_thread(cls, conn, identifier, msg):
         """Do not call this directly"""
