@@ -73,14 +73,14 @@ class ServerNetworkHandler:
         conn.close()
 
     @classmethod
-    def send_to_all(cls, identifier, msg):
+    def send_to_all(cls, identifier : str, msg : str):
         """Starts a thread for each client and sends the provided message to all sockets connected to this server"""
         for conn in cls.clients.copy():
             thread = threading.Thread(target=cls.send_to_conn_thread, args=(conn, identifier, msg))
             thread.start()
 
     @classmethod
-    def send_to_conn(cls, conn, identifier, msg):
+    def send_to_conn(cls, conn, identifier : str, msg : str):
         """Starts a thread and sends the provided message to the socket provided"""
         thread = threading.Thread(target=cls.send_to_conn_thread, args=(conn, identifier, msg))
         thread.start()

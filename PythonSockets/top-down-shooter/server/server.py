@@ -1,5 +1,5 @@
 import servernetworkhandler
-import serverPlayer
+import serverplayer
 import json
 import time
 
@@ -7,7 +7,8 @@ handler = servernetworkhandler.ServerNetworkHandler
 
 PLAYER_MOVE_SPEED = 100
 players = {}
-player_inputs = {}
+player_move_inputs = {}
+player_shoot_inputs = {}
 
 def client_added_callback(conn):
 
@@ -20,7 +21,8 @@ def client_added_callback(conn):
     handler.send_to_conn(conn, "receive_all", json.dumps(all_players_json))
 
     players[conn] = serverPlayer.ServerPlayer()
-    player_inputs[conn] = {"x" : 0, "y" : 0}
+    player_move_inputs[conn] = {"x" : 0, "y" : 0}
+    player_shoot_inputs[conn] = False
 
     # Now send to all players that a new player has been added
     new_player_msg = json.dumps([players[conn].id, {"x" : players[conn].pos.x, "y" : players[conn].pos.y}])
@@ -30,28 +32,38 @@ def client_added_callback(conn):
 def client_removed_callback(conn):
     handler.send_to_all_except_conn(conn, "player_left", json.dumps([players[conn].id]))
     players.pop(conn)
-    player_inputs.pop(conn)
+    player_move_inputs.pop(conn)
+    player_shoot_inputs.pop(conn)
 
 handler.initialize(client_added_callback=client_added_callback, client_removed_callback=client_removed_callback)
 
 
-def onInput(conn, msg):
+def on_move_input(conn, msg):
     input = json.loads(msg)
-    player_inputs[conn] = input
+    player_move_inputs[conn] = input
     
-handler.add_recv_function("i", onInput)
+handler.add_recv_function("move_input", on_move_input)
 
+def on_shoot_input(conn, msg):
+    player_shoot_inputs[conn] = True
+
+handler.add_recv_function("shoot_input", on_shoot_input)
 # ------------------------- MAIN LOOP ----------------------
 last_time = time.perf_counter()
 delta_time = 0
 while True:
-    for conn in player_inputs:
-        players[conn].pos.x += player_inputs[conn]["x"] * PLAYER_MOVE_SPEED * delta_time
-        players[conn].pos.y -= player_inputs[conn]["y"] * PLAYER_MOVE_SPEED * delta_time
+    for conn in player_move_inputs.copy():
+        players[conn].pos.x += player_move_inputs[conn]["x"] * PLAYER_MOVE_SPEED * delta_time
+        players[conn].pos.y -= player_move_inputs[conn]["y"] * PLAYER_MOVE_SPEED * delta_time
 
     for conn in players.copy(): # need to make a copy of the dictionary so that there is no error if a player joins while we are looping through the players dictionary
         msg = json.dumps([players[conn].id, {"x" : players[conn].pos.x, "y" : players[conn].pos.y}])
-        handler.send_to_all("move_player", msg)
+        handler.send_to_all("player_moved", msg)
+
+    for conn in player_shoot_inputs.copy():
+        if player_shoot_inputs[conn]:
+            handler.send_to_all("player_shot", str(players[conn].id))
+            player_shoot_inputs[conn] = False
 
     # Put all logic above here -------------------------------------------
 
