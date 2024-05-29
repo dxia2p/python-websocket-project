@@ -3,6 +3,7 @@ import clientnetworkhandler
 import clientplayer
 import json
 import clientcamera
+import clientbullet
 
 pygame.init()
 
@@ -16,8 +17,9 @@ handler.initialize()
 
 clientcamera.Camera.initialize(screen, pygame.Vector2(700, 700))
 
-players = {} # key: id of player, value : player object
 my_id = -1
+players = {} # key: id of player, value : player object
+BULLET_SPEED = 10
 
 def on_player_moved(msg):
     player_move_data = json.loads(msg) # [id, {"x" : x, "y" : y}]
@@ -55,7 +57,9 @@ handler.add_function("player_left", on_player_left)
 
 def on_player_shot(msg):
     data = json.loads(msg) # [{"x" : x, "y" : y}, {"x" : x, "y" : y}] First is the position to shoot from, second is direction
-    print(data)
+    pos = pygame.Vector2(data[0]["x"], data[0]["y"])
+    vel = pygame.Vector2(data[1]["x"], data[1]["y"]) * BULLET_SPEED
+    clientbullet.ClientBullet(pos, vel)
 
 handler.add_function("player_shot", on_player_shot)
 
@@ -87,13 +91,21 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 # Tell the server that we want to shoot and provide the direction we are shooting in
-                shoot_dir = (players[my_id].pos - clientcamera.Camera.mouse_pos_to_world(pygame.mouse.get_pos())).normalize()
+                print(clientcamera.Camera.mouse_pos_to_world(pygame.mouse.get_pos()))
+                shoot_dir = (clientcamera.Camera.mouse_pos_to_world(pygame.mouse.get_pos()) - players[my_id].pos).normalize()
                 send_dict = {"x" : shoot_dir.x, "y" : shoot_dir.y}
                 handler.send("shoot_input", json.dumps(send_dict))
 
+    if len(players) > 0:
+        clientcamera.Camera.pos = pygame.Vector2(players[my_id].pos.x, players[my_id].pos.y)
+
     # Draw all the players
     for player_id in players:
-        clientcamera.Camera.draw_circle(players[player_id].pos, 10, "white")
+        if player_id == my_id:
+            clientcamera.Camera.draw_circle(players[player_id].pos, 20, "green")
+        else:
+            clientcamera.Camera.draw_circle(players[player_id].pos, 20, "blue")
+    clientbullet.ClientBullet.update_all()
 
     pygame.display.flip()
     clock.tick(60)

@@ -19,5 +19,5 @@ class Camera:
         """Returns the position of the mouse in world coordinates"""
         mouse_pos += pygame.Vector2(cls.pos.x, -cls.pos.y)
         mouse_pos += pygame.Vector2(-cls.size.x / 2, -cls.size.y / 2)
-        mouse_pos = pygame.Vector2(-mouse_pos.x, mouse_pos.y)
+        mouse_pos = pygame.Vector2(mouse_pos.x, -mouse_pos.y)
         return mouse_pos
