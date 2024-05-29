@@ -17,12 +17,14 @@ handler.initialize()
 clientcamera.Camera.initialize(screen, pygame.Vector2(700, 700))
 
 players = {} # key: id of player, value : player object
+my_id = -1
 
 def on_player_moved(msg):
     player_move_data = json.loads(msg) # [id, {"x" : x, "y" : y}]
     players[player_move_data[0]].pos = pygame.Vector2(player_move_data[1]["x"], player_move_data[1]["y"])
 
 handler.add_function("player_moved", on_player_moved)
+
 
 def receive_all_players(msg): # This is only called at the start on a newly joined player
     players_list = json.loads(msg)
@@ -31,6 +33,13 @@ def receive_all_players(msg): # This is only called at the start on a newly join
         players[player[0]] = clientplayer.ClientPlayer(pygame.Vector2(player[1]["x"], player[1]["y"]))
 
 handler.add_function("receive_all", receive_all_players)
+
+def recieve_my_id(msg):
+    global my_id
+    my_id = int(msg)
+
+handler.add_function("receive_my_id", recieve_my_id)
+
 
 def on_player_added(msg):
     new_player_data = json.loads(msg)
@@ -45,7 +54,8 @@ def on_player_left(msg):
 handler.add_function("player_left", on_player_left)
 
 def on_player_shot(msg):
-    print("Shoot")
+    data = json.loads(msg) # [{"x" : x, "y" : y}, {"x" : x, "y" : y}] First is the position to shoot from, second is direction
+    print(data)
 
 handler.add_function("player_shot", on_player_shot)
 
@@ -76,7 +86,10 @@ while running:
     for event in events:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
-                handler.send("shoot_input", "")
+                # Tell the server that we want to shoot and provide the direction we are shooting in
+                shoot_dir = (players[my_id].pos - clientcamera.Camera.mouse_pos_to_world(pygame.mouse.get_pos())).normalize()
+                send_dict = {"x" : shoot_dir.x, "y" : shoot_dir.y}
+                handler.send("shoot_input", json.dumps(send_dict))
 
     # Draw all the players
     for player_id in players:

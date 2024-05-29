@@ -2,6 +2,8 @@ import servernetworkhandler
 import serverplayer
 import json
 import time
+import servercolliderbodies
+import pygame
 
 handler = servernetworkhandler.ServerNetworkHandler
 
@@ -20,9 +22,10 @@ def client_added_callback(conn):
     print(json.dumps(all_players_json))
     handler.send_to_conn(conn, "receive_all", json.dumps(all_players_json))
 
-    players[conn] = serverPlayer.ServerPlayer()
-    player_move_inputs[conn] = {"x" : 0, "y" : 0}
-    player_shoot_inputs[conn] = False
+    players[conn] = serverplayer.ServerPlayer()
+    player_move_inputs[conn] = pygame.Vector2(0, 0)
+    player_shoot_inputs[conn] = pygame.Vector2(0, 0)
+    handler.send_to_conn(conn, "receive_my_id", str(players[conn].id))
 
     # Now send to all players that a new player has been added
     new_player_msg = json.dumps([players[conn].id, {"x" : players[conn].pos.x, "y" : players[conn].pos.y}])
@@ -40,12 +43,14 @@ handler.initialize(client_added_callback=client_added_callback, client_removed_c
 
 def on_move_input(conn, msg):
     input = json.loads(msg)
-    player_move_inputs[conn] = input
+    player_move_inputs[conn] = pygame.Vector2(input["x"], input["y"])
     
 handler.add_recv_function("move_input", on_move_input)
 
+
 def on_shoot_input(conn, msg):
-    player_shoot_inputs[conn] = True
+    input_dirs = json.loads(msg)
+    player_shoot_inputs[conn] = pygame.Vector2(input_dirs["x"], input_dirs["y"])
 
 handler.add_recv_function("shoot_input", on_shoot_input)
 # ------------------------- MAIN LOOP ----------------------
@@ -53,17 +58,18 @@ last_time = time.perf_counter()
 delta_time = 0
 while True:
     for conn in player_move_inputs.copy():
-        players[conn].pos.x += player_move_inputs[conn]["x"] * PLAYER_MOVE_SPEED * delta_time
-        players[conn].pos.y -= player_move_inputs[conn]["y"] * PLAYER_MOVE_SPEED * delta_time
+        players[conn].pos.x += player_move_inputs[conn].x * PLAYER_MOVE_SPEED * delta_time
+        players[conn].pos.y += player_move_inputs[conn].y * PLAYER_MOVE_SPEED * delta_time
 
     for conn in players.copy(): # need to make a copy of the dictionary so that there is no error if a player joins while we are looping through the players dictionary
         msg = json.dumps([players[conn].id, {"x" : players[conn].pos.x, "y" : players[conn].pos.y}])
         handler.send_to_all("player_moved", msg)
 
     for conn in player_shoot_inputs.copy():
-        if player_shoot_inputs[conn]:
-            handler.send_to_all("player_shot", str(players[conn].id))
-            player_shoot_inputs[conn] = False
+        if player_shoot_inputs[conn] != pygame.Vector2(0, 0):
+            shoot_msg = [{"x" : players[conn].pos.x, "y" : players[conn].pos.y}, {"x" : player_shoot_inputs[conn].x, "y" : player_shoot_inputs[conn].y}]
+            handler.send_to_all("player_shot", json.dumps(shoot_msg))
+            player_shoot_inputs[conn] = pygame.Vector2(0, 0)
 
     # Put all logic above here -------------------------------------------
 

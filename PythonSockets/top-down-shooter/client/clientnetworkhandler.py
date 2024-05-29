@@ -69,5 +69,8 @@ class ClientNetworkHandler:
         cls.client.sendall(message)
 
     @classmethod
-    def add_function(cls, messageIdentifier : str, function : Callable[[str], None]):
-        cls.recv_functions[messageIdentifier] = function
+    def add_function(cls, message_identifier : str, function : Callable[[str], None]):
+        if message_identifier in cls.recv_functions:
+            print(f"Error, identifier: [{message_identifier}] already exists!")
+            return
+        cls.recv_functions[message_identifier] = function
