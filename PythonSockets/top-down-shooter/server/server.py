@@ -2,13 +2,13 @@ import servernetworkhandler
 import serverplayer
 import json
 import time
-import servercolliderbodies
+import serverbullet
 import pygame
 
 handler = servernetworkhandler.ServerNetworkHandler
 
 PLAYER_MOVE_SPEED = 100
-BULLET_RADIUS = 10
+BULLET_RADIUS = 7
 BULLET_SPEED = 10
 players = {}
 player_move_inputs = {}
@@ -75,13 +75,13 @@ while True:
     for conn in player_shoot_inputs.copy():
         if player_shoot_inputs[conn] != pygame.Vector2(0, 0): # This means the player wants to shoot
             shoot_dir = pygame.Vector2(player_shoot_inputs[conn].x, player_shoot_inputs[conn].y)
-            bullet = servercolliderbodies.CircleBody(pygame.Vector2(players[conn].pos.x, players[conn].pos.y), shoot_dir * BULLET_SPEED, BULLET_RADIUS, bullet_hit)
+            bullet = serverbullet.ServerBullet(pygame.Vector2(players[conn].pos.x, players[conn].pos.y), shoot_dir * BULLET_SPEED, BULLET_RADIUS, bullet_hit)
             shoot_msg = [{"x" : players[conn].pos.x, "y" : players[conn].pos.y}, {"x" : shoot_dir.x, "y" : shoot_dir.y}]
             handler.send_to_all("player_shot", json.dumps(shoot_msg))
             player_shoot_inputs[conn] = pygame.Vector2(0, 0)
     
-    servercolliderbodies.CircleBody.update_all_bodies()
-    servercolliderbodies.CircleBody.check_collisions()
+    serverbullet.ServerBullet.update_all_bodies()
+    serverbullet.ServerBullet.check_collisions()
 
     # Put all logic above here -------------------------------------------
 

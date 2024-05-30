@@ -15,7 +15,10 @@ running = True
 handler = clientnetworkhandler.ClientNetworkHandler
 handler.initialize()
 
-clientcamera.Camera.initialize(screen, pygame.Vector2(700, 700))
+WINDOW_SIZE_X = 700
+WINDOW_SIZE_Y = 700
+
+clientcamera.Camera.initialize(screen, pygame.Vector2(WINDOW_SIZE_X, WINDOW_SIZE_Y))
 
 my_id = -1
 players = {} # key: id of player, value : player object
@@ -68,7 +71,7 @@ lastInput = {"x" : 0, "y" : 0}
 # ------------------------------- MAIN LOOP --------------------------------------
 while running:
 
-    screen.fill((0, 0, 0))
+    screen.fill((255, 255, 255))
 
     events = pygame.event.get()
 
@@ -91,7 +94,6 @@ while running:
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 # Tell the server that we want to shoot and provide the direction we are shooting in
-                print(clientcamera.Camera.mouse_pos_to_world(pygame.mouse.get_pos()))
                 shoot_dir = (clientcamera.Camera.mouse_pos_to_world(pygame.mouse.get_pos()) - players[my_id].pos).normalize()
                 send_dict = {"x" : shoot_dir.x, "y" : shoot_dir.y}
                 handler.send("shoot_input", json.dumps(send_dict))
@@ -102,10 +104,20 @@ while running:
     # Draw all the players
     for player_id in players:
         if player_id == my_id:
-            clientcamera.Camera.draw_circle(players[player_id].pos, 20, "green")
+            clientcamera.Camera.draw_circle(players[player_id].pos, 15, "green")
         else:
-            clientcamera.Camera.draw_circle(players[player_id].pos, 20, "blue")
+            clientcamera.Camera.draw_circle(players[player_id].pos, 15, "blue")
     clientbullet.ClientBullet.update_all()
+
+    # Draw grid lines to help the player visualize their movement
+    grid_size = 30
+    line_width = 2
+    line_color = (175, 217, 237)
+    if my_id != -1:
+        for i in range(int(players[my_id].pos.x - WINDOW_SIZE_X / 2), int(players[my_id].pos.x + WINDOW_SIZE_X), grid_size): # draw the vertical lines
+            clientcamera.Camera.draw_line(pygame.Vector2(0, i), pygame.Vector2(WINDOW_SIZE_Y, i), line_width, line_color)
+        for i in range(0, WINDOW_SIZE_Y, grid_size): # draw the horizontal lines
+            clientcamera.Camera.draw_line(pygame.Vector2(i, 0), pygame.Vector2(i, WINDOW_SIZE_X), line_width, line_color)
 
     pygame.display.flip()
     clock.tick(60)

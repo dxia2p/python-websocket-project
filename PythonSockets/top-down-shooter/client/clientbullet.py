@@ -13,6 +13,6 @@ class ClientBullet:
     def update_all(cls):
         for bullet in cls.bullets:
             bullet.pos += bullet.velocity
-            clientcamera.Camera.draw_circle(bullet.pos, cls.BULLET_RADIUS, "white")
+            clientcamera.Camera.draw_circle(bullet.pos, cls.BULLET_RADIUS, "yellow")
 
     
