@@ -3,13 +3,14 @@ import serverplayer
 import json
 import time
 import serverbullet
+import servercolliders
 import pygame
 
 handler = servernetworkhandler.ServerNetworkHandler
 
-PLAYER_MOVE_SPEED = 100
+PLAYER_MOVE_SPEED = 200
 BULLET_RADIUS = 7
-BULLET_SPEED = 10
+BULLET_SPEED = 400
 players = {}
 player_move_inputs = {}
 player_shoot_inputs = {}
@@ -21,7 +22,7 @@ def client_added_callback(conn):
     for player_conn in players:
         player = players[player_conn]
         all_players_json.append([player.id, {"x" : player.pos.x, "y" : player.pos.y}])
-    print(json.dumps(all_players_json))
+
     handler.send_to_conn(conn, "receive_all", json.dumps(all_players_json))
 
     players[conn] = serverplayer.ServerPlayer()
@@ -55,12 +56,10 @@ def on_shoot_input(conn, msg):
     player_shoot_inputs[conn] = pygame.Vector2(input_dirs["x"], input_dirs["y"])
 
 handler.add_recv_function("shoot_input", on_shoot_input)
-
-def bullet_hit():
-    print("ASKLDJASLDJSKLDJSJd")
 # ------------------------- MAIN LOOP ----------------------
 last_time = time.perf_counter()
 delta_time = 0
+test_bullet = serverbullet.ServerBullet(pygame.Vector2(0, 0), pygame.Vector2(0, 0), BULLET_RADIUS)
 while True:
     for conn in player_move_inputs.copy():
         if player_move_inputs[conn].x != 0 or player_move_inputs[conn].y != 0:
@@ -75,14 +74,15 @@ while True:
     for conn in player_shoot_inputs.copy():
         if player_shoot_inputs[conn] != pygame.Vector2(0, 0): # This means the player wants to shoot
             shoot_dir = pygame.Vector2(player_shoot_inputs[conn].x, player_shoot_inputs[conn].y)
-            bullet = serverbullet.ServerBullet(pygame.Vector2(players[conn].pos.x, players[conn].pos.y), shoot_dir * BULLET_SPEED, BULLET_RADIUS, bullet_hit)
+            bullet = serverbullet.ServerBullet(pygame.Vector2(players[conn].pos.x, players[conn].pos.y), pygame.Vector2(shoot_dir.x, shoot_dir.y) * BULLET_SPEED, BULLET_RADIUS)
             shoot_msg = [{"x" : players[conn].pos.x, "y" : players[conn].pos.y}, {"x" : shoot_dir.x, "y" : shoot_dir.y}]
             handler.send_to_all("player_shot", json.dumps(shoot_msg))
             player_shoot_inputs[conn] = pygame.Vector2(0, 0)
     
-    serverbullet.ServerBullet.update_all_bodies()
-    serverbullet.ServerBullet.check_collisions()
-
+    serverbullet.ServerBullet.update_all_bodies(delta_time)
+    
+    servercolliders.CircleCollider.check_collision()
+    servercolliders.CircleCollider.check_for_destroy()
     # Put all logic above here -------------------------------------------
 
     clock = time.perf_counter() * 60 # CODE TO MAKE THIS LOOP RUN 60 TIMES A SECOND

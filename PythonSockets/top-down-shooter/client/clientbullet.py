@@ -10,9 +10,9 @@ class ClientBullet:
         ClientBullet.bullets.append(self)
     
     @classmethod
-    def update_all(cls):
+    def update_all(cls, delta_time):
         for bullet in cls.bullets:
-            bullet.pos += bullet.velocity
+            bullet.pos += bullet.velocity * delta_time
             clientcamera.Camera.draw_circle(bullet.pos, cls.BULLET_RADIUS, "yellow")
 
     

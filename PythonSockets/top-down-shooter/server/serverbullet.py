@@ -1,33 +1,28 @@
 from typing import Callable
 import pygame
 import math
-
-def vector2_dist(vec1 : pygame.Vector2, vec2 : pygame.Vector2):
-    return math.sqrt((vec1.x - vec2.x)**2 + (vec1.y - vec2.y)**2)
+import servercolliders
 
 class ServerBullet:
-    collider_bodies = []
-    def __init__(self, pos, velocity, radius, on_collision_func) -> None:
+    server_bullets = []
+
+    def bullet_hit(self):
+        self.destroy_self()
+        self.circle_collider.destroy_self()
+
+    def __init__(self, pos, velocity, radius) -> None:
         self.pos = pos
         self.radius = radius
         self.velocity = velocity
-        self.on_collision_func = on_collision_func
-        ServerBullet.collider_bodies.append(self)
+        self.circle_collider = servercolliders.CircleCollider(pos, radius, self.bullet_hit)
+        ServerBullet.server_bullets.append(self)
 
     @classmethod
-    def update_all_bodies(cls): # This function can be moved to a parent class later
-        for body in cls.collider_bodies:
-            body.pos += body.velocity
-
-    @classmethod
-    def check_collisions(cls): # This function can be moved to a parent class later
-        """Call this every frame to detect collisions"""
-        for i in range(len(cls.collider_bodies)):
-            for j in range(i + 1, len(cls.collider_bodies)):
-                if vector2_dist(cls.collider_bodies[i].pos, cls.collider_bodies[j].pos) < (cls.collider_bodies[i].radius + cls.collider_bodies[j].radius):
-                    cls.collider_bodies[i].on_collision_func()
-                    cls.collider_bodies[j].on_collision_func()
+    def update_all_bodies(cls, delta_time): # This function can be moved to a parent class later
+        for body in cls.server_bullets:
+            body.pos += body.velocity * delta_time
 
     def destroy_self(self):
-        """Removes this collider from the list of collider_bodies"""
-        ServerBullet.collider_bodies.remove(self)
+        """Removes this collider from the list of server_bullets"""
+        print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+        ServerBullet.server_bullets.remove(self)

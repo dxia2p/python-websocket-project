@@ -22,7 +22,7 @@ clientcamera.Camera.initialize(screen, pygame.Vector2(WINDOW_SIZE_X, WINDOW_SIZE
 
 my_id = -1
 players = {} # key: id of player, value : player object
-BULLET_SPEED = 10
+BULLET_SPEED = 400
 
 def on_player_moved(msg):
     player_move_data = json.loads(msg) # [id, {"x" : x, "y" : y}]
@@ -66,8 +66,14 @@ def on_player_shot(msg):
 
 handler.add_function("player_shot", on_player_shot)
 
+def on_bullet_destroyed(msg):
+    pass
+
+handler.add_function("bullet_destroyed", on_bullet_destroyed)
+
 clock = pygame.time.Clock()
 lastInput = {"x" : 0, "y" : 0}
+delta_time = 0
 # ------------------------------- MAIN LOOP --------------------------------------
 while running:
 
@@ -107,20 +113,27 @@ while running:
             clientcamera.Camera.draw_circle(players[player_id].pos, 15, "green")
         else:
             clientcamera.Camera.draw_circle(players[player_id].pos, 15, "blue")
-    clientbullet.ClientBullet.update_all()
+
+
+    clientcamera.Camera.draw_circle(pygame.Vector2(0, 0), 20, "pink")
 
     # Draw grid lines to help the player visualize their movement
     grid_size = 30
-    line_width = 2
+    line_width = 1
     line_color = (175, 217, 237)
+
     if my_id != -1:
-        for i in range(int(players[my_id].pos.x - WINDOW_SIZE_X / 2), int(players[my_id].pos.x + WINDOW_SIZE_X), grid_size): # draw the vertical lines
-            clientcamera.Camera.draw_line(pygame.Vector2(0, i), pygame.Vector2(WINDOW_SIZE_Y, i), line_width, line_color)
-        for i in range(0, WINDOW_SIZE_Y, grid_size): # draw the horizontal lines
-            clientcamera.Camera.draw_line(pygame.Vector2(i, 0), pygame.Vector2(i, WINDOW_SIZE_X), line_width, line_color)
+        player_pos = players[my_id].pos
+        for i in range(int(player_pos.x - WINDOW_SIZE_X / 2 - player_pos.x % grid_size), int(player_pos.x + WINDOW_SIZE_X - player_pos.x % grid_size), grid_size): # draw the vertical lines
+            clientcamera.Camera.draw_line(pygame.Vector2(i, player_pos.y - WINDOW_SIZE_X / 2), pygame.Vector2(i, player_pos.y + WINDOW_SIZE_X / 2), line_width, line_color)
+        for i in range(int(player_pos.y - WINDOW_SIZE_Y / 2 - player_pos.y % grid_size), int(player_pos.y + WINDOW_SIZE_Y / 2 - player_pos.y % grid_size + grid_size), grid_size): # draw the horizontal lines
+            clientcamera.Camera.draw_line(pygame.Vector2(player_pos.x - WINDOW_SIZE_Y / 2, i), pygame.Vector2(player_pos.x + WINDOW_SIZE_Y / 2, i), line_width, line_color)
+
+    clientbullet.ClientBullet.update_all(delta_time)
 
     pygame.display.flip()
-    clock.tick(60)
+    delta_time = clock.tick(60) / 1000
+
     for event in events:
         if event.type == pygame.QUIT:
             running = False
