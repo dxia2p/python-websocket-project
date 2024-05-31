@@ -59,7 +59,6 @@ handler.add_recv_function("shoot_input", on_shoot_input)
 # ------------------------- MAIN LOOP ----------------------
 last_time = time.perf_counter()
 delta_time = 0
-test_bullet = serverbullet.ServerBullet(pygame.Vector2(0, 0), pygame.Vector2(0, 0), BULLET_RADIUS)
 while True:
     for conn in player_move_inputs.copy():
         if player_move_inputs[conn].x != 0 or player_move_inputs[conn].y != 0:
@@ -75,7 +74,7 @@ while True:
         if player_shoot_inputs[conn] != pygame.Vector2(0, 0): # This means the player wants to shoot
             shoot_dir = pygame.Vector2(player_shoot_inputs[conn].x, player_shoot_inputs[conn].y)
             bullet = serverbullet.ServerBullet(pygame.Vector2(players[conn].pos.x, players[conn].pos.y), pygame.Vector2(shoot_dir.x, shoot_dir.y) * BULLET_SPEED, BULLET_RADIUS)
-            shoot_msg = [{"x" : players[conn].pos.x, "y" : players[conn].pos.y}, {"x" : shoot_dir.x, "y" : shoot_dir.y}]
+            shoot_msg = [{"x" : players[conn].pos.x, "y" : players[conn].pos.y}, {"x" : shoot_dir.x, "y" : shoot_dir.y}, bullet.id]
             handler.send_to_all("player_shot", json.dumps(shoot_msg))
             player_shoot_inputs[conn] = pygame.Vector2(0, 0)
     

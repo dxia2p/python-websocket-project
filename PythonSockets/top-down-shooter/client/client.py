@@ -59,14 +59,16 @@ def on_player_left(msg):
 handler.add_function("player_left", on_player_left)
 
 def on_player_shot(msg):
-    data = json.loads(msg) # [{"x" : x, "y" : y}, {"x" : x, "y" : y}] First is the position to shoot from, second is direction
+    data = json.loads(msg) # [{"x" : x, "y" : y}, {"x" : x, "y" : y}, id] First is the position to shoot from, second is direction
     pos = pygame.Vector2(data[0]["x"], data[0]["y"])
     vel = pygame.Vector2(data[1]["x"], data[1]["y"]) * BULLET_SPEED
-    clientbullet.ClientBullet(pos, vel)
+    clientbullet.ClientBullet(pos, vel, data[2])
 
 handler.add_function("player_shot", on_player_shot)
 
 def on_bullet_destroyed(msg):
+    id = int(msg)
+    clientbullet.ClientBullet.remove_at_id(id)
     pass
 
 handler.add_function("bullet_destroyed", on_bullet_destroyed)

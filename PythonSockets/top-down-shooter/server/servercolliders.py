@@ -1,8 +1,4 @@
-import pygame
-import math
-
-def vector2_dist(vec1 : pygame.Vector2, vec2 : pygame.Vector2):
-    return math.sqrt((vec1.x - vec2.x)**2 + (vec1.y - vec2.y)**2)
+import utility
 
 class CircleCollider: # can make a base class collider and inherit from that in the future, but for now only need circle class
     colliders = []
@@ -20,7 +16,7 @@ class CircleCollider: # can make a base class collider and inherit from that in 
             for j in range(i, len(cls.colliders)):
                 if i == j:
                     continue
-                if vector2_dist(cls.colliders[i].pos, cls.colliders[j].pos) < (cls.colliders[i].radius + cls.colliders[j].radius):
+                if utility.vector2_dist(cls.colliders[i].pos, cls.colliders[j].pos) < (cls.colliders[i].radius + cls.colliders[j].radius):
                     cls.colliders[i].on_collision_func()
                     cls.colliders[j].on_collision_func()
 
