@@ -4,6 +4,7 @@ import clientplayer
 import json
 import clientcamera
 import clientbullet
+import clientenemy
 
 pygame.init()
 
@@ -73,6 +74,20 @@ def on_bullet_destroyed(msg):
 
 handler.add_function("bullet_destroyed", on_bullet_destroyed)
 
+def receive_all_enemies(msg):
+    data = json.loads(msg)
+    print(data)
+    for enemy in data:
+        clientenemy.ClientEnemy(enemy[0], pygame.Vector2(enemy[1]["x"], enemy[1]["y"]))
+
+handler.add_function("receive_all_enemies", receive_all_enemies)
+
+def on_enemy_spawned(msg):
+    data = json.loads(msg) # [id, {"x" : x, "y" : y}]
+    clientenemy.ClientEnemy(data[0], pygame.Vector2(data[1]["x"], data[1]["y"]))
+
+handler.add_function("enemy_spawned", on_enemy_spawned)
+
 clock = pygame.time.Clock()
 lastInput = {"x" : 0, "y" : 0}
 delta_time = 0
@@ -109,12 +124,6 @@ while running:
     if len(players) > 0:
         clientcamera.Camera.pos = pygame.Vector2(players[my_id].pos.x, players[my_id].pos.y)
 
-    # Draw all the players
-    for player_id in players:
-        if player_id == my_id:
-            clientcamera.Camera.draw_circle(players[player_id].pos, 15, "green")
-        else:
-            clientcamera.Camera.draw_circle(players[player_id].pos, 15, "blue")
 
 
     clientcamera.Camera.draw_circle(pygame.Vector2(0, 0), 20, "pink")
@@ -131,7 +140,17 @@ while running:
         for i in range(int(player_pos.y - WINDOW_SIZE_Y / 2 - player_pos.y % grid_size), int(player_pos.y + WINDOW_SIZE_Y / 2 - player_pos.y % grid_size + grid_size), grid_size): # draw the horizontal lines
             clientcamera.Camera.draw_line(pygame.Vector2(player_pos.x - WINDOW_SIZE_Y / 2, i), pygame.Vector2(player_pos.x + WINDOW_SIZE_Y / 2, i), line_width, line_color)
 
+
+    # Draw all the players
+    for player_id in players:
+        if player_id == my_id:
+            clientcamera.Camera.draw_circle(players[player_id].pos, 15, "green")
+        else:
+            clientcamera.Camera.draw_circle(players[player_id].pos, 15, "blue")
+
+
     clientbullet.ClientBullet.update_all(delta_time)
+    clientenemy.ClientEnemy.draw_all()
 
     pygame.display.flip()
     delta_time = clock.tick(60) / 1000

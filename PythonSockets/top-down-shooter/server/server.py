@@ -5,6 +5,7 @@ import time
 import serverbullet
 import servercolliders
 import pygame
+import serverenemy
 
 handler = servernetworkhandler.ServerNetworkHandler
 
@@ -33,6 +34,12 @@ def client_added_callback(conn):
     # Now send to all players that a new player has been added
     new_player_msg = json.dumps([players[conn].id, {"x" : players[conn].pos.x, "y" : players[conn].pos.y}])
     handler.send_to_all("player_added", new_player_msg)
+
+    # Send to the new player all the existing enemies
+    send_enemies_message = []
+    for enemy in serverenemy.ServerEnemy.enemies:
+        send_enemies_message.append([enemy.id, {"x" : enemy.pos.x, "y" : enemy.pos.y}])
+    handler.send_to_conn(conn, "receive_all_enemies", json.dumps(send_enemies_message))
     
 
 def client_removed_callback(conn):
@@ -56,6 +63,8 @@ def on_shoot_input(conn, msg):
     player_shoot_inputs[conn] = pygame.Vector2(input_dirs["x"], input_dirs["y"])
 
 handler.add_recv_function("shoot_input", on_shoot_input)
+
+test_enemy = serverenemy.ServerEnemy(pygame.Vector2(20, 20), players)
 # ------------------------- MAIN LOOP ----------------------
 last_time = time.perf_counter()
 delta_time = 0
@@ -82,6 +91,8 @@ while True:
     
     servercolliders.CircleCollider.check_collision()
     servercolliders.CircleCollider.check_for_destroy()
+
+    serverenemy.ServerEnemy.update_all(delta_time)
     # Put all logic above here -------------------------------------------
 
     clock = time.perf_counter() * 60 # CODE TO MAKE THIS LOOP RUN 60 TIMES A SECOND
