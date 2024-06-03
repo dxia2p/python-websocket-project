@@ -1,14 +1,20 @@
 import clientcamera
 
 class ClientEnemy:
-    enemies = []
+    enemies = {}
+
+    @classmethod
+    def destroy_at_id(cls, id):
+        cls.enemies.pop(id)
+
     def __init__(self, id, pos) -> None:
         self.id = id
         self.pos = pos
-        ClientEnemy.enemies.append(self)
+        ClientEnemy.enemies[id] = self
 
     @classmethod
     def draw_all(cls):
         """Call this every frame to draw all the enemies"""
-        for enemy in cls.enemies:
-            clientcamera.Camera.draw_circle(enemy.pos, 15, "red")
+        for enemy_id in cls.enemies:
+            enemy = cls.enemies[enemy_id]
+            clientcamera.Camera.draw_circle(enemy.pos, 20, "red")

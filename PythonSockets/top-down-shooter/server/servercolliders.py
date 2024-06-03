@@ -3,10 +3,11 @@ import utility
 class CircleCollider: # can make a base class collider and inherit from that in the future, but for now only need circle class
     colliders = []
     colliders_to_destroy = []
-    def __init__(self, pos, radius, on_collision_func) -> None:
+    def __init__(self, pos, radius, tag, on_collision_func) -> None:
         self.pos = pos
         self.radius = radius
         self.on_collision_func = on_collision_func
+        self.tag = tag
         CircleCollider.colliders.append(self)
     
     @classmethod
@@ -17,8 +18,8 @@ class CircleCollider: # can make a base class collider and inherit from that in 
                 if i == j:
                     continue
                 if utility.vector2_dist(cls.colliders[i].pos, cls.colliders[j].pos) < (cls.colliders[i].radius + cls.colliders[j].radius):
-                    cls.colliders[i].on_collision_func()
-                    cls.colliders[j].on_collision_func()
+                    cls.colliders[i].on_collision_func(cls.colliders[j])
+                    cls.colliders[j].on_collision_func(cls.colliders[i])
 
     @classmethod
     def check_for_destroy(cls):

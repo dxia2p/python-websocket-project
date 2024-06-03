@@ -6,6 +6,8 @@ import serverbullet
 import servercolliders
 import pygame
 import serverenemy
+import random
+import math
 
 handler = servernetworkhandler.ServerNetworkHandler
 
@@ -68,6 +70,8 @@ test_enemy = serverenemy.ServerEnemy(pygame.Vector2(20, 20), players)
 # ------------------------- MAIN LOOP ----------------------
 last_time = time.perf_counter()
 delta_time = 0
+start_spawn_enemies_delay = 3
+spawn_enemies_delay = 1
 while True:
     for conn in player_move_inputs.copy():
         if player_move_inputs[conn].x != 0 or player_move_inputs[conn].y != 0:
@@ -86,6 +90,16 @@ while True:
             shoot_msg = [{"x" : players[conn].pos.x, "y" : players[conn].pos.y}, {"x" : shoot_dir.x, "y" : shoot_dir.y}, bullet.id]
             handler.send_to_all("player_shot", json.dumps(shoot_msg))
             player_shoot_inputs[conn] = pygame.Vector2(0, 0)
+
+    if len(players) != 0:
+        # Start spawning enemies
+        if spawn_enemies_delay <= 0:
+            rand_angle = random.random() * 2 * math.pi
+            random_pos = pygame.Vector2(math.cos(rand_angle), math.sin(rand_angle)) * 1000
+            serverenemy.ServerEnemy(random_pos, players)
+            spawn_enemies_delay = start_spawn_enemies_delay
+        else:
+            spawn_enemies_delay -= delta_time
     
     serverbullet.ServerBullet.update_all_bodies(delta_time)
     

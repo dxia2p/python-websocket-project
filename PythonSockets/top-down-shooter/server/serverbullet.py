@@ -8,7 +8,9 @@ class ServerBullet:
     server_bullets = []
     next_id = 0
 
-    def bullet_hit(self):
+    def bullet_hit(self, other_collider):
+        if other_collider.tag == "bullet":
+            return
         self.destroy_self()
         self.circle_collider.destroy_self()
         servernetworkhandler.ServerNetworkHandler.send_to_all("bullet_destroyed", str(self.id))
@@ -17,7 +19,7 @@ class ServerBullet:
         self.pos = pos
         self.radius = radius
         self.velocity = velocity
-        self.circle_collider = servercolliders.CircleCollider(pos, radius, self.bullet_hit)
+        self.circle_collider = servercolliders.CircleCollider(pos, radius, "bullet", self.bullet_hit)
         self.id = ServerBullet.next_id
         ServerBullet.next_id += 1
         ServerBullet.server_bullets.append(self)

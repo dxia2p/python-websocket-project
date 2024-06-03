@@ -76,7 +76,6 @@ handler.add_function("bullet_destroyed", on_bullet_destroyed)
 
 def receive_all_enemies(msg):
     data = json.loads(msg)
-    print(data)
     for enemy in data:
         clientenemy.ClientEnemy(enemy[0], pygame.Vector2(enemy[1]["x"], enemy[1]["y"]))
 
@@ -87,6 +86,19 @@ def on_enemy_spawned(msg):
     clientenemy.ClientEnemy(data[0], pygame.Vector2(data[1]["x"], data[1]["y"]))
 
 handler.add_function("enemy_spawned", on_enemy_spawned)
+
+def on_enemy_moved(msg):
+    data = json.loads(msg) # [[id, {"x" : x, "y" : y}], ...]
+    for enemy_data in data:
+        clientenemy.ClientEnemy.enemies[enemy_data[0]].pos = pygame.Vector2(enemy_data[1]["x"], enemy_data[1]["y"])
+
+handler.add_function("enemy_moved", on_enemy_moved)
+
+def on_enemy_died(msg):
+    enemy_id = int(msg)
+    clientenemy.ClientEnemy.destroy_at_id(enemy_id)
+
+handler.add_function("enemy_died", on_enemy_died)
 
 clock = pygame.time.Clock()
 lastInput = {"x" : 0, "y" : 0}
