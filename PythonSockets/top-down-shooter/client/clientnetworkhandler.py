@@ -7,6 +7,7 @@ BUFFER_SIZE = 64
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
 MSG_TYPE_SPLITTER = '|'
+MSG_END_CHAR = '&'
 
 class ClientNetworkHandler:
     port = -1
@@ -41,6 +42,7 @@ class ClientNetworkHandler:
                     msg = cls.client.recv(msg_length, socket.MSG_WAITALL).decode(FORMAT)
 
                     split_msg = msg.split(MSG_TYPE_SPLITTER, 1) # All messages should have this character after the identifier for the data in the message
+                    split_msg[1] = split_msg[1].split(MSG_END_CHAR)[0] # Remove the last character which indicates the end of a message
                     if split_msg[1] == DISCONNECT_MESSAGE:
                         connected = False
                         continue
@@ -51,6 +53,9 @@ class ClientNetworkHandler:
                         print(f"Unknown message identifier [{split_msg[0]}]")
             except Exception as ex:
                 print(ex)
+                discard_msg = ""
+                while discard_msg != MSG_END_CHAR:
+                    discard_msg = cls.client.recv(1).decode(FORMAT)
 
     @classmethod
     def send(cls, identifier, msg):

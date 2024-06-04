@@ -9,7 +9,7 @@ class ServerBullet:
     next_id = 0
 
     def bullet_hit(self, other_collider):
-        if other_collider.tag == "bullet":
+        if other_collider.tag != "enemy":
             return
         self.destroy_self()
         self.circle_collider.destroy_self()
@@ -25,11 +25,10 @@ class ServerBullet:
         ServerBullet.server_bullets.append(self)
 
     @classmethod
-    def update_all_bodies(cls, delta_time): # This function can be moved to a parent class later
+    def update_all_bullets(cls, delta_time): # This function can be moved to a parent class later
         for body in cls.server_bullets:
             body.pos += body.velocity * delta_time
 
     def destroy_self(self):
         """Removes this collider from the list of server_bullets"""
-        print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
         ServerBullet.server_bullets.remove(self)

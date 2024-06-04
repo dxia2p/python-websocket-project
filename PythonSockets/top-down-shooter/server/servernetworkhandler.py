@@ -7,6 +7,7 @@ BUFFER_SIZE = 1024
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
 MSG_TYPE_SPLITTER = '|'
+MSG_END_CHAR = '&'
 
 class ServerNetworkHandler:
     port = -1
@@ -96,7 +97,7 @@ class ServerNetworkHandler:
     @classmethod
     def send_to_conn_thread(cls, conn, identifier, msg):
         """Do not call this directly"""
-        message = (identifier + MSG_TYPE_SPLITTER + msg).encode(FORMAT)
+        message = (identifier + MSG_TYPE_SPLITTER + msg + MSG_END_CHAR).encode(FORMAT)
         msg_length = len(message)
         send_length = str(msg_length).encode(FORMAT)
         send_length += b" " * (HEADER - len(send_length))

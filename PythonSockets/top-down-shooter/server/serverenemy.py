@@ -15,18 +15,19 @@ class ServerEnemy:
         servernetworkhandler.ServerNetworkHandler.send_to_all("enemy_died", str(self.id))
 
     def on_collide(self, other_collider):
-        if other_collider.tag == "enemy":
-            return
-        self.destroy_self()
+        if other_collider.tag == "bullet":
+            self.destroy_self()
+        elif other_collider.tag == "player":
+            self.target_pos = None
 
     def __init__(self, pos, players):
         self.pos = pos
-        self.target_player = None
+        self.target_pos = None
         shortest_dist = 10000000
         for player_conn in players:
             dist = utility.vector2_dist(players[player_conn].pos, self.pos)
             if dist < shortest_dist:
-                self.target_player = players[player_conn]
+                self.target_pos = players[player_conn].pos
                 shortest_dist = dist
         self.id = ServerEnemy.next_id
         self.collider = servercolliders.CircleCollider(self.pos, 20, "enemy", self.on_collide) 
@@ -37,13 +38,19 @@ class ServerEnemy:
         
 
     @classmethod
-    def update_all(cls, delta_time):
+    def update_all(cls, delta_time, players):
         data_to_send = []
         for enemy in cls.enemies:
-            if enemy.target_player == None:
-                continue
-            target_player_dir = (enemy.target_player.pos - enemy.pos).normalize()
-            enemy.pos += delta_time * target_player_dir * ServerEnemy.MOVE_SPEED
-            data_to_send.append([enemy.id, {"x" : enemy.pos.x, "y" : enemy.pos.y}])
-        
+            if enemy.target_pos == None:
+                shortest_dist = 1000000
+                for player_conn in players:
+                    dist = utility.vector2_dist(players[player_conn].pos, enemy.pos)
+                    if dist < shortest_dist:
+                        enemy.target_pos = players[player_conn].pos
+                        shortest_dist = dist
+            else:
+                target_player_dir = (enemy.target_pos - enemy.pos).normalize()
+                enemy.pos += delta_time * target_player_dir * ServerEnemy.MOVE_SPEED
+                data_to_send.append([enemy.id, {"x" : enemy.pos.x, "y" : enemy.pos.y}])
+            
         servernetworkhandler.ServerNetworkHandler.send_to_all("enemy_moved", json.dumps(data_to_send))

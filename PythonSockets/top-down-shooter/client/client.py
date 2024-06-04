@@ -6,15 +6,20 @@ import clientcamera
 import clientbullet
 import clientenemy
 
+ip = input("Enter IP, leave blank for default IP:")
+
 pygame.init()
 
-screen = pygame.display.set_mode((700, 700))
+screen = pygame.display.set_mode((700, 700), pygame.HWSURFACE | pygame.DOUBLEBUF | pygame.SCALED, vsync=1)
 
-pygame.display.set_caption("My Game")
+pygame.display.set_caption("Multiplayer")
 running = True
 
 handler = clientnetworkhandler.ClientNetworkHandler
-handler.initialize()
+if ip == "":    
+    handler.initialize()
+else:
+    handler.initialize(ip)
 
 WINDOW_SIZE_X = 700
 WINDOW_SIZE_Y = 700
@@ -99,6 +104,13 @@ def on_enemy_died(msg):
     clientenemy.ClientEnemy.destroy_at_id(enemy_id)
 
 handler.add_function("enemy_died", on_enemy_died)
+
+def on_my_player_die(msg):
+    print("YOU DIED!")
+    global running
+    running = False
+
+handler.add_function("you_died", on_my_player_die)
 
 clock = pygame.time.Clock()
 lastInput = {"x" : 0, "y" : 0}
